@@ -22,6 +22,7 @@ import org.opencv.core.MatOfRect;
 import org.opencv.core.Point;
 import org.opencv.core.Rect;
 import org.opencv.core.Scalar;
+import org.opencv.core.Size;
 import org.opencv.features2d.MSER;
 import org.opencv.imgproc.Imgproc;
 
@@ -30,6 +31,8 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.LinkedList;
 import java.util.List;
+
+import static org.opencv.core.CvType.CV_8UC3;
 
 public class MainActivity extends AppCompatActivity implements CameraBridgeViewBase.CvCameraViewListener2 {
 
@@ -41,9 +44,9 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
 
     CameraBridgeViewBase cameraView;
     BaseLoaderCallback baseLoaderCallback;
-//    Mat frame;
     Switch algorithmSwitch, thresholdSwitch;
     MSER featuresDetector;
+    double[][] circlesOnScreen = {{0,0,0},{0,0,0},{0,0,0},{0,0,0},{0,0,0}};
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -99,6 +102,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         Mat blue = channels.get(2);
         Mat sum = new Mat();
         Mat result = new Mat();
+        Mat colorFrame = frame.clone();
 
         Core.addWeighted(red, 0.333, red, 0, 0, red);
         Core.addWeighted(blue, 0.333, red, 0.333, 0, sum);
@@ -115,29 +119,54 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
 
         // ------ Hough Circles
 
-        if (algorithmSwitch.isChecked()){
+        if (!algorithmSwitch.isChecked()){
             if (thresholdSwitch.isChecked()){
-                Imgproc.threshold(frame, frame, 120, 255, Imgproc.THRESH_BINARY);
+                Imgproc.threshold(frame, frame, 210, 255, Imgproc.THRESH_BINARY);
             }
 
             Mat circles = new Mat();
-            convertToGray(frame.getNativeObjAddr());
+            Imgproc.cvtColor(frame, frame, Imgproc.COLOR_RGBA2GRAY);
 
-            Imgproc.HoughCircles(frame, circles, Imgproc.CV_HOUGH_GRADIENT, 2, 100, 100, 90, 20, 100);
+            convexContours(frame.getNativeObjAddr());
 
-            if (circles.cols() > 0) {
-                for (int x=0; x < Math.min(circles.cols(), 5); x++ ) {
-                    double circleVec[] = circles.get(0, x);
+            houghCircles(frame.getNativeObjAddr(), colorFrame.getNativeObjAddr(), circlesOnScreen);
 
-                    if (circleVec == null) {
-                        break;
-                    }
+//            Mat morphKernel = Imgproc.getStructuringElement(Imgproc.CV_SHAPE_ELLIPSE, new Size(5,5));
+//            Imgproc.dilate(frame, frame, morphKernel);
+//            Imgproc.erode(frame, frame, morphKernel);
 
-                    Point center = new Point((int) circleVec[0], (int) circleVec[1]);
-                    int radius = (int) circleVec[2];
-                    Imgproc.circle(frame, center, radius, new Scalar(255, 0, 0), 2);
-                }
-            }
+//            Imgproc.HoughCircles(frame, circles, Imgproc.CV_HOUGH_GRADIENT, 2, 2000, 300, 90, 20, 60);
+//
+//            if (circles.cols() > 0) {
+//                for (int x = 0; x < Math.min(circles.cols(), 5); x++) {
+//                    double[] circleVec = circles.get(0, x);
+//
+//                    if (circleVec == null) {
+//                        break;
+//                    }
+//
+//                    double oldX = circlesOnScreen[x][0];
+//                    double oldY = circlesOnScreen[x][1];
+//                    double oldRadius = circlesOnScreen[x][2];
+//                    double newX = circleVec[0];
+//                    double newY = circleVec[1];
+//                    double newRadius = circleVec[2];
+//
+//                    if ((newX > oldX + 7 || newX < oldX - 7) &&
+//                            (newY > oldY + 7 || newY < oldX - 7)){
+//                        circlesOnScreen[x][0] = newX;
+//                        circlesOnScreen[x][1] = newY;
+//                        circlesOnScreen[x][2] = newRadius;
+//                        // send extracted blob to identification
+//                    }
+//
+////                    Point center = new Point((int) circleVec[0], (int) circleVec[1]);
+////                    int radius = (int) circleVec[2];
+//                    Point center = new Point((int) circlesOnScreen[x][0], (int) circlesOnScreen[x][1]);
+//                    int radius = (int) circlesOnScreen[x][2];
+//                    Imgproc.circle(frame, center, radius, new Scalar(255, 0, 0), 2);
+//                }
+//            }
 
             circles.release();
         }
@@ -148,7 +177,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
             List<int[]> roiData = new ArrayList<>();
             LinkedList<MatOfPoint> regions = new LinkedList<>();
             MatOfRect bboxes = new MatOfRect();
-            convertToGray(frame.getNativeObjAddr());
+            Imgproc.cvtColor(frame, frame, Imgproc.COLOR_RGBA2GRAY);
 
             featuresDetector.detectRegions(frame, regions, bboxes);
             List<Rect> rects = bboxes.toList();
@@ -158,6 +187,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
                     return Integer.compare(r2.width, r1.width);
                 }
             });
+
             for (Rect r : rects){
                 Point p1 = new Point(r.x, r.y);
                 Point p2 = new Point(r.x + r.width, r.y + r.height);
@@ -171,7 +201,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
                 }
                 if (!overlaps && isSquare) {
                     roiData.add(region);
-                    Imgproc.rectangle(frame, p1, p2, new Scalar(255, 0, 0), 2);
+                    Imgproc.rectangle(colorFrame, p1, p2, new Scalar(255, 0, 0), 2);
                 }
             }
 
@@ -180,7 +210,8 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
 
         // ------- return
 
-        return frame;
+//        frame.release();
+        return colorFrame;
     }
 
     @Override
@@ -210,5 +241,6 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
      * which is packaged with this application.
      */
     public native String stringFromJNI();
-    public native void convertToGray(long addr);
+    public native void convexContours(long addr);
+    public native void houghCircles(long matAddr, long colorAddr, double[][] oldCircles);
 }
