@@ -15,6 +15,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.provider.Settings;
+import android.util.Log;
 import android.view.SurfaceView;
 import android.widget.Button;
 import android.widget.ImageView;
@@ -47,6 +48,7 @@ import org.osmdroid.views.MapView;
 import org.osmdroid.views.overlay.mylocation.GpsMyLocationProvider;
 import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -56,26 +58,38 @@ import java.util.List;
 import static org.opencv.core.CvType.CV_8UC3;
 import static org.osmdroid.tileprovider.util.StorageUtils.getStorage;
 
-class CircleCounter{
-    public int counter;
-    public float x;
-    public float y;
+class CircleCounter {
+    public int cnt;
+    public double x;
+    public double y;
+    public double r;
 
-    public CircleCounter(int cnt, float x, float y){
-        this.counter = cnt;
-        this.x = x;
-        this.y = y;
+    public CircleCounter(){
+        this.cnt = 0;
+        this.x = 0d;
+        this.y = 0d;
+        this.r = 0d;
     }
 
-    public void checkToUpdate(float x, float y){
-        if(Math.abs(this.x - x) < 1.5 && Math.abs(this.y - y) < 1.5){
-            this.counter++;
+    public int intersects(Mat circles){
+        for (int i = 0; i < circles.cols(); i++) {
+            double newX = circles.get(0, i)[0];
+            double newY = circles.get(0, i)[1];
+
+            if ((Math.abs(this.x - newX) < 13) && (Math.abs(this.y - newY) < 13)){
+                this.cnt++;
+                if (this.cnt == 5) return 10;           // sufficient stability to send blob to identification
+                else return i;
+            }
         }
-        else {
-            this.counter = 0;
-            this.x = x;
-            this.y = y;
-        }
+        return -1;
+    }
+
+    public void updateCircle(double x, double y, double r){
+        this.x = x;
+        this.y = y;
+        this.r = r;
+        this.cnt = 0;
     }
 }
 
@@ -102,10 +116,18 @@ public class MainActivity extends AppUtilities implements CameraBridgeViewBase.C
     BaseLoaderCallback baseLoaderCallback;
     Switch algorithmSwitch, thresholdSwitch;
     MSER featuresDetector;
-    double[][] circlesOnScreen = {{0,0,0},{0,0,0},{0,0,0},{0,0,0},{0,0,0}};
-    CircleCounter c1 = new CircleCounter(0, 0f, 0f);    //
-    CircleCounter c2 = new CircleCounter(0, 0f, 0f);    //
-    CircleCounter[] circlesOnScreen2 = {c1, c2};                   //
+
+    // fixed list of circles on the screen
+    CircleCounter c1 = new CircleCounter();
+    CircleCounter c2 = new CircleCounter();
+    CircleCounter c3 = new CircleCounter();
+    CircleCounter c4 = new CircleCounter();
+    CircleCounter[] onScreen = {c1, c2, c3, c4};
+    List<Integer> stableCircles = new ArrayList<>();
+    List<CircleCounter> circlesToUpdate = new ArrayList<>();
+
+    // Activity context (useful for AsyncTasks)
+    final Activity thisActivity = this;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -171,10 +193,9 @@ public class MainActivity extends AppUtilities implements CameraBridgeViewBase.C
             }
         };
 
-        //gps location configuration
+        //gps location configuration (manager and location listener)
         locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
 
-        final Activity thisActivity = this;               // save current activity for AsyncTask
         listener = new LocationListener() {
             @Override
             public void onLocationChanged(Location location) {
@@ -209,6 +230,9 @@ public class MainActivity extends AppUtilities implements CameraBridgeViewBase.C
         checkForPermissions();
     }
 
+    /***
+     * Location permission methods for GPS features
+     */
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
         switch (requestCode){
@@ -241,12 +265,22 @@ public class MainActivity extends AppUtilities implements CameraBridgeViewBase.C
         locationManager.requestLocationUpdates("network", 0, 1, listener);
     }
 
+    /***
+     * Override AsyncTaskResultListener interface methods
+     */
     @Override
-    public void giveResult(int result) {
+    public void giveResult(int result){
         img.setImageResource(result);
     }
 
+    @Override
+    public void giveImgClass(int result){
+        // todo: do sth with image class obtained from server
+    }
 
+    /***
+     * Override CameraView methods
+     */
     @Override
     public void onCameraViewStarted(int width, int height) {
 //        frame = new Mat(width, height, CvType.CV_8UC4);
@@ -259,7 +293,7 @@ public class MainActivity extends AppUtilities implements CameraBridgeViewBase.C
     }
 
     @Override
-    public Mat onCameraFrame(CameraBridgeViewBase.CvCameraViewFrame inputFrame) {
+    public Mat onCameraFrame(CameraBridgeViewBase.CvCameraViewFrame inputFrame){
 
         Mat frame = inputFrame.rgba();
 
@@ -294,19 +328,57 @@ public class MainActivity extends AppUtilities implements CameraBridgeViewBase.C
                 Imgproc.threshold(frame, frame, 210, 255, Imgproc.THRESH_BINARY);
             }
 
-//            Mat circles = new Mat();
+            Mat circles = new Mat();
             Imgproc.cvtColor(frame, frame, Imgproc.COLOR_RGBA2GRAY);
 
             convexContours(frame.getNativeObjAddr());
 
-            houghCircles(frame.getNativeObjAddr(), colorFrame.getNativeObjAddr(), circlesOnScreen);
+//            houghCircles(frame.getNativeObjAddr(), colorFrame.getNativeObjAddr(), circlesOnScreen);
 
-//            Mat morphKernel = Imgproc.getStructuringElement(Imgproc.CV_SHAPE_ELLIPSE, new Size(5,5));
-//            Imgproc.dilate(frame, frame, morphKernel);
-//            Imgproc.erode(frame, frame, morphKernel);
-//
-//            Imgproc.HoughCircles(frame, circles, Imgproc.CV_HOUGH_GRADIENT, 2, 2000, 300, 90, 20, 60);
-//
+            Mat morphKernel = Imgproc.getStructuringElement(Imgproc.CV_SHAPE_ELLIPSE, new Size(5,5));
+            Imgproc.dilate(frame, frame, morphKernel);
+            Imgproc.erode(frame, frame, morphKernel);
+
+            Imgproc.HoughCircles(frame, circles, Imgproc.CV_HOUGH_GRADIENT, 2, 200, 300, 90, 20, 60);
+
+            stableCircles = new ArrayList<>();
+            circlesToUpdate = new ArrayList<>();
+            for (CircleCounter c : onScreen){
+                int res = c.intersects(circles);
+                if (res == 10){         // code 10 means blob is stable and can be identified
+                    Rect blob = new Rect((int)(c.x - c.r), (int)(c.y - c.r), (int)(c.r*2), (int)(c.r*2));
+                    Mat roi = new Mat(colorFrame, blob);
+                    ServerConnectAsyncTask asyncTask = null;
+                    try {
+                        asyncTask = new ServerConnectAsyncTask(roi, thisActivity);
+                        asyncTask.execute();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+                if (res >= 0) {
+                    stableCircles.add(res);
+                } else {
+                    circlesToUpdate.add(c);
+                }
+                Log.i("COUNTER INFO", String.valueOf(onScreen[0].cnt));
+            }
+            int i = 0;
+            for (CircleCounter c : circlesToUpdate){
+                while(stableCircles.contains(i)){
+                    i++;
+                }
+                if (circles.cols() > i) {
+                    c.updateCircle(circles.get(0, i)[0], circles.get(0, i)[1], circles.get(0, i)[2]);
+                    i++;
+                } else {
+                    c.updateCircle(0d, 0d, 0d);             // when less than 4 circles found
+                }
+            }
+            for (CircleCounter c : onScreen){
+                Imgproc.circle(colorFrame, new Point((int) c.x, (int) c.y), (int) c.r, new Scalar(255, 0, 0), 2);
+            }
+
 //            if (circles.cols() > 0) {
 //                for (int x = 0; x < Math.min(circles.cols(), 5); x++) {
 //                    double[] circleVec = circles.get(0, x);
@@ -338,7 +410,7 @@ public class MainActivity extends AppUtilities implements CameraBridgeViewBase.C
 //                }
 //            }
 //
-//            circles.release();
+            circles.release();
         }
 
         // --------- MSER
@@ -384,6 +456,9 @@ public class MainActivity extends AppUtilities implements CameraBridgeViewBase.C
         return colorFrame;
     }
 
+    /***
+     * Override other App methods
+     */
     @Override
     protected void onResume() {
         super.onResume();
