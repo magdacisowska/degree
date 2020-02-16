@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">NativeApp</string>
+    <string name="osm_user">m4gd4c_dev</string>
+    <string name="osm_password">masterthesis</string>
 </resources>

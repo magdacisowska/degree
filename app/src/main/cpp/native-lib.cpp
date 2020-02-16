@@ -55,28 +55,30 @@ Java_com_example_nativeapp_MainActivity_houghCircles(JNIEnv *env, jobject , jlon
 
         jdoubleArray oldCircle = (jdoubleArray) (env->GetObjectArrayElement(circlesOnScreen, i));
         jboolean isCopy;
-        jdouble *elem = (env->GetDoubleArrayElements(oldCircle, &isCopy));
+        jdouble *old = (env->GetDoubleArrayElements(oldCircle, &isCopy));
 
-        double oldX = elem[0];
-        double oldY = elem[1];
-        double oldRadius = elem[2];
+        double oldX = old[0];
+        double oldY = old[1];
+        double oldRadius = old[2];
         double newX = c[0];
         double newY = c[1];
         double newRadius = c[2];
 
-        if ((newX > oldX + 5.0 || newX < oldX - 5.0) &&
-                (newY > oldY + 5.0 || newY < oldX - 5.0)){
-            elem[0] = newX;
-            elem[1] = newY;
-            elem[2] = newRadius;
+        if ((newX > oldX + 3.0 || newX < oldX - 3.0) &&
+                (newY > oldY + 3.0 || newY < oldX - 3.0)){
+            old[0] = newX;
+            old[1] = newY;
+            old[2] = newRadius;
             // send extracted blob to identification
         }
+
+//        env->ReleaseDoubleArrayElements(oldCircle, old, 0);
 
 //        Point center = Point(c[0], c[1]);
 //        int radius = c[2];
 
-        Point center = Point((int) elem[0], (int) elem[1]);
-        int radius = (int) elem[2];
+        Point center = Point((int) old[0], (int) old[1]);
+        int radius = (int) old[2];
         circle(colorFrame, center, radius, Scalar(255,0,255), 3, LINE_AA);
     }
 }

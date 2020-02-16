@@ -7,14 +7,65 @@
     android:layout_height="match_parent"
     tools:context=".MainActivity">
 
+
     <org.opencv.android.JavaCameraView
         android:id="@+id/CameraView"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        android:layout_width="282dp"
+        android:layout_height="430dp"
         android:visibility="visible"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="1.0"
+        app:layout_constraintStart_toStartOf="parent"
         opencv:show_fps="true"
-        tools:layout_editor_absoluteX="-70dp"
-        tools:layout_editor_absoluteY="-66dp" />
+        tools:layout_editor_absoluteY="0dp" />
+
+    <org.osmdroid.views.MapView
+        android:id="@+id/mapView"
+        android:layout_width="411dp"
+        android:layout_height="301dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="1.0"
+        tools:layout_editor_absoluteX="0dp"/>
+
+    <ImageView
+        android:id="@+id/imageView"
+        android:layout_width="65dp"
+        android:layout_height="70dp"
+        app:srcCompat="@drawable/zakaz"
+        tools:layout_editor_absoluteX="0dp"
+        tools:layout_editor_absoluteY="0dp" />
+
+    <TextView
+        android:id="@+id/infoTextView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="40dp"
+        android:text="Current location"
+        app:layout_constraintTop_toBottomOf="@+id/switch1"
+        tools:layout_editor_absoluteX="10dp" />
+
+    <TextView
+        android:id="@+id/lonTextView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Longitude"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.046"
+        app:layout_constraintStart_toEndOf="@+id/latTextView"
+        app:layout_constraintTop_toBottomOf="@+id/infoTextView"
+        app:layout_constraintVertical_bias="0.092" />
+
+    <TextView
+        android:id="@+id/latTextView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Latitude"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/infoTextView"
+        app:layout_constraintVertical_bias="0.092" />
 
     <Switch
         android:id="@+id/switch1"
@@ -22,12 +73,10 @@
         android:layout_height="wrap_content"
         android:text="Switch algorithm"
         android:textColor="#FFEB3B"
-        opencv:layout_constraintBottom_toBottomOf="parent"
-        opencv:layout_constraintEnd_toEndOf="parent"
-        opencv:layout_constraintHorizontal_bias="0.744"
-        opencv:layout_constraintStart_toStartOf="parent"
-        opencv:layout_constraintTop_toTopOf="@+id/CameraView"
-        opencv:layout_constraintVertical_bias="0.945" />
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.318"
+        tools:layout_editor_absoluteX="0dp" />
 
     <Switch
         android:id="@+id/switch2"
@@ -35,11 +84,9 @@
         android:layout_height="wrap_content"
         android:text="Treshold"
         android:textColor="#FFEB3B"
-        opencv:layout_constraintBottom_toBottomOf="parent"
-        opencv:layout_constraintEnd_toStartOf="@+id/switch1"
-        opencv:layout_constraintHorizontal_bias="0.564"
-        opencv:layout_constraintStart_toStartOf="@+id/CameraView"
-        opencv:layout_constraintTop_toTopOf="parent"
-        opencv:layout_constraintVertical_bias="0.944" />
+        app:layout_constraintBottom_toTopOf="@+id/switch1"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.715"
+        tools:layout_editor_absoluteX="16dp" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

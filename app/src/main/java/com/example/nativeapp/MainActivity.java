@@ -1,9 +1,23 @@
 package com.example.nativeapp;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
 
+import android.Manifest;
+import android.app.Activity;
+import android.content.Context;
+import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.location.Location;
+import android.location.LocationListener;
+import android.location.LocationManager;
+import android.os.Build;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
+import android.provider.Settings;
 import android.view.SurfaceView;
+import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -25,6 +39,13 @@ import org.opencv.core.Scalar;
 import org.opencv.core.Size;
 import org.opencv.features2d.MSER;
 import org.opencv.imgproc.Imgproc;
+import org.osmdroid.config.Configuration;
+import org.osmdroid.tileprovider.tilesource.TileSourceFactory;
+import org.osmdroid.util.GeoPoint;
+import org.osmdroid.views.MapController;
+import org.osmdroid.views.MapView;
+import org.osmdroid.views.overlay.mylocation.GpsMyLocationProvider;
+import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -33,8 +54,32 @@ import java.util.LinkedList;
 import java.util.List;
 
 import static org.opencv.core.CvType.CV_8UC3;
+import static org.osmdroid.tileprovider.util.StorageUtils.getStorage;
 
-public class MainActivity extends AppCompatActivity implements CameraBridgeViewBase.CvCameraViewListener2 {
+class CircleCounter{
+    public int counter;
+    public float x;
+    public float y;
+
+    public CircleCounter(int cnt, float x, float y){
+        this.counter = cnt;
+        this.x = x;
+        this.y = y;
+    }
+
+    public void checkToUpdate(float x, float y){
+        if(Math.abs(this.x - x) < 1.5 && Math.abs(this.y - y) < 1.5){
+            this.counter++;
+        }
+        else {
+            this.counter = 0;
+            this.x = x;
+            this.y = y;
+        }
+    }
+}
+
+public class MainActivity extends AppUtilities implements CameraBridgeViewBase.CvCameraViewListener2, AsyncTaskResultListener {
 
     // Used to load the 'native-lib' library on application startup.
     static {
@@ -42,19 +87,69 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         System.loadLibrary("opencv_java3");
     }
 
+    // map-related fields
+    private Button secondActivityBtn, cameraViewActivityBtn;
+    private TextView lat, lon;
+    private ImageView img;
+    private LocationManager locationManager;
+    private LocationListener listener;
+
+    MapView map;
+    MapController mc;
+
+    // camera-related fields
     CameraBridgeViewBase cameraView;
     BaseLoaderCallback baseLoaderCallback;
     Switch algorithmSwitch, thresholdSwitch;
     MSER featuresDetector;
     double[][] circlesOnScreen = {{0,0,0},{0,0,0},{0,0,0},{0,0,0},{0,0,0}};
+    CircleCounter c1 = new CircleCounter(0, 0f, 0f);    //
+    CircleCounter c2 = new CircleCounter(0, 0f, 0f);    //
+    CircleCounter[] circlesOnScreen2 = {c1, c2};                   //
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        //map configuration
+        Context ctx = getApplicationContext();
+        Configuration.getInstance().load(ctx, PreferenceManager.getDefaultSharedPreferences(ctx));
+        Configuration.getInstance().setUserAgentValue(BuildConfig.APPLICATION_ID);
+        Configuration.getInstance().setOsmdroidBasePath(getStorage());
+        Configuration.getInstance().setOsmdroidTileCache(getStorage());
+
+        //inflate and create the map
+        setContentView(R.layout.activity_main);
+
+        //create map view
+        map = (MapView) findViewById(R.id.mapView);
+        map.getTileProvider().getTileCache().getProtectedTileComputers().clear();
+        map.getTileProvider().getTileCache().setAutoEnsureCapacity(false);
+        map.setTileSource(TileSourceFactory.MAPNIK);
+        map.setMultiTouchControls(true);
+        map.setBuiltInZoomControls(false);
+        map.setMaxZoomLevel(20.);
+        map.setMinZoomLevel(18.);
+
+        //create overlay
+        MyLocationNewOverlay mLocationOverlay = new MyLocationNewOverlay(new GpsMyLocationProvider(ctx), map);
+        mLocationOverlay.enableMyLocation();
+        mLocationOverlay.setDrawAccuracyEnabled(false);
+        map.getOverlays().add(mLocationOverlay);
+
+        mc = (MapController) map.getController();
+        mc.setZoom(20);
+
+        //init text fields and switches
+        lat = (TextView) findViewById(R.id.latTextView);
+        lon = (TextView) findViewById(R.id.lonTextView);
+        img = (ImageView) findViewById(R.id.imageView);
+
         algorithmSwitch = findViewById(R.id.switch1);
         thresholdSwitch = findViewById(R.id.switch2);
+
+        //camera view
         cameraView = (JavaCameraView) findViewById(R.id.CameraView);
         cameraView.setVisibility(SurfaceView.VISIBLE);
         cameraView.enableFpsMeter();
@@ -75,7 +170,82 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
                 }
             }
         };
+
+        //gps location configuration
+        locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
+
+        final Activity thisActivity = this;               // save current activity for AsyncTask
+        listener = new LocationListener() {
+            @Override
+            public void onLocationChanged(Location location) {
+                lat.setText("Lat: "  + location.getLatitude());
+                lon.setText("Lon: " + location.getLongitude());
+                GeoPoint currentCenter = new GeoPoint(location.getLatitude(), location.getLongitude());
+                mc.animateTo(currentCenter);
+
+                //download current bounding box
+                BoundingBoxAsyncTask boundingBoxAsyncTask = new BoundingBoxAsyncTask(thisActivity, encodeAuth());
+                boundingBoxAsyncTask.execute(location.getLatitude(), location.getLongitude());
+            }
+
+            @Override
+            public void onStatusChanged(String s, int i, Bundle bundle) {
+
+            }
+
+            @Override
+            public void onProviderEnabled(String s) {
+
+            }
+
+            @Override
+            public void onProviderDisabled(String s) {
+                //go to settings
+                Intent i = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
+                startActivity(i);
+            }
+        };
+
+        checkForPermissions();
     }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        switch (requestCode){
+            case 10:
+                checkForPermissions();
+                break;
+            default:
+                break;
+        }
+    }
+
+    void checkForPermissions(){
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED &&
+                ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                requestPermissions(
+                        new String[]{
+                                Manifest.permission.ACCESS_COARSE_LOCATION,
+                                Manifest.permission.ACCESS_FINE_LOCATION,
+                                Manifest.permission.INTERNET,
+                                Manifest.permission.WRITE_EXTERNAL_STORAGE,
+                                Manifest.permission.READ_EXTERNAL_STORAGE}
+                        ,10);
+            }
+            return;
+        }
+
+        // this code won't execute if permissions are not granted
+        locationManager.requestLocationUpdates("gps", 0, 1, listener);
+        locationManager.requestLocationUpdates("network", 0, 1, listener);
+    }
+
+    @Override
+    public void giveResult(int result) {
+        img.setImageResource(result);
+    }
+
 
     @Override
     public void onCameraViewStarted(int width, int height) {
@@ -124,7 +294,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
                 Imgproc.threshold(frame, frame, 210, 255, Imgproc.THRESH_BINARY);
             }
 
-            Mat circles = new Mat();
+//            Mat circles = new Mat();
             Imgproc.cvtColor(frame, frame, Imgproc.COLOR_RGBA2GRAY);
 
             convexContours(frame.getNativeObjAddr());
@@ -134,7 +304,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
 //            Mat morphKernel = Imgproc.getStructuringElement(Imgproc.CV_SHAPE_ELLIPSE, new Size(5,5));
 //            Imgproc.dilate(frame, frame, morphKernel);
 //            Imgproc.erode(frame, frame, morphKernel);
-
+//
 //            Imgproc.HoughCircles(frame, circles, Imgproc.CV_HOUGH_GRADIENT, 2, 2000, 300, 90, 20, 60);
 //
 //            if (circles.cols() > 0) {
@@ -167,8 +337,8 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
 //                    Imgproc.circle(frame, center, radius, new Scalar(255, 0, 0), 2);
 //                }
 //            }
-
-            circles.release();
+//
+//            circles.release();
         }
 
         // --------- MSER
