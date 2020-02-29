@@ -1,6 +1,5 @@
 package com.example.nativeapp;
 
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 
 import android.Manifest;
@@ -25,7 +24,6 @@ import android.widget.Toast;
 
 import org.opencv.android.BaseLoaderCallback;
 import org.opencv.android.CameraBridgeViewBase;
-import org.opencv.android.JavaCamera2View;
 import org.opencv.android.JavaCameraView;
 import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
@@ -54,44 +52,9 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 
-import static org.opencv.core.CvType.CV_8UC3;
 import static org.osmdroid.tileprovider.util.StorageUtils.getStorage;
-
-class CircleCounter {
-    public int cnt;
-    public double x;
-    public double y;
-    public double r;
-
-    public CircleCounter(){
-        this.cnt = 0;
-        this.x = 0d;
-        this.y = 0d;
-        this.r = 0d;
-    }
-
-    public int intersects(Mat circles){
-        for (int i = 0; i < circles.cols(); i++) {
-            double newX = circles.get(0, i)[0];
-            double newY = circles.get(0, i)[1];
-
-            if ((Math.abs(this.x - newX) < 13) && (Math.abs(this.y - newY) < 13)){
-                this.cnt++;
-                if (this.cnt == 5) return 10;           // sufficient stability to send blob to identification
-                else return i;
-            }
-        }
-        return -1;
-    }
-
-    public void updateCircle(double x, double y, double r){
-        this.x = x;
-        this.y = y;
-        this.r = r;
-        this.cnt = 0;
-    }
-}
 
 public class MainActivity extends AppUtilities implements CameraBridgeViewBase.CvCameraViewListener2, AsyncTaskResultListener {
 
@@ -116,6 +79,13 @@ public class MainActivity extends AppUtilities implements CameraBridgeViewBase.C
     BaseLoaderCallback baseLoaderCallback;
     Switch algorithmSwitch, thresholdSwitch;
     MSER featuresDetector;
+
+    // currently displayed resource's id
+    int imgDisplayed;
+
+    // requests-related fields
+    OSM_Node nearestNode;
+    private int currentChangeset;
 
     // fixed list of circles on the screen
     CircleCounter c1 = new CircleCounter();
@@ -269,13 +239,27 @@ public class MainActivity extends AppUtilities implements CameraBridgeViewBase.C
      * Override AsyncTaskResultListener interface methods
      */
     @Override
-    public void giveResult(int result){
-        img.setImageResource(result);
+    public void giveResult(int imgClass) {
+        // imgClass is integer corresponding to R.drawable
+        img.setImageResource(imgClass);
+        imgDisplayed = imgClass;
     }
 
     @Override
-    public void giveImgClass(int result){
+    public void giveImgClass(int imgClass) {
         // todo: do sth with image class obtained from server
+        if (imgDisplayed != imgClass) {
+            imgDisplayed = decodeAnsToDrawable(imgClass);
+            // edit node
+            Map<String, String> tags = decodeAnsToTags(imgClass);
+            EditNodeAsyncTask editNodeAsyncTask = new EditNodeAsyncTask(encodeAuth(), nearestNode, tags,100, thisActivity);
+            editNodeAsyncTask.execute();
+        }
+    }
+
+    @Override
+    public void giveNearestNode(OSM_Node node) {
+        nearestNode = node;
     }
 
     /***
@@ -345,9 +329,11 @@ public class MainActivity extends AppUtilities implements CameraBridgeViewBase.C
             circlesToUpdate = new ArrayList<>();
             for (CircleCounter c : onScreen){
                 int res = c.intersects(circles);
-                if (res == 10){         // code 10 means blob is stable and can be identified
+                if (res == 10 & c.r > 15){         // code 10 means blob is stable and can be identified
                     Rect blob = new Rect((int)(c.x - c.r), (int)(c.y - c.r), (int)(c.r*2), (int)(c.r*2));
                     Mat roi = new Mat(colorFrame, blob);
+                    Imgproc.cvtColor(roi, roi, Imgproc.COLOR_RGBA2RGB);
+                    Imgproc.resize(roi, roi, new Size(5,5));
                     ServerConnectAsyncTask asyncTask = null;
                     try {
                         asyncTask = new ServerConnectAsyncTask(roi, thisActivity);

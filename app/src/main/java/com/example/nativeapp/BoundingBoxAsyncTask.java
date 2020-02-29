@@ -5,6 +5,7 @@ import android.os.AsyncTask;
 
 import com.example.nativeapp.OSM_Node;
 
+import org.w3c.dom.Node;
 import org.xml.sax.SAXException;
 
 import java.io.IOException;
@@ -20,6 +21,7 @@ public class BoundingBoxAsyncTask extends AsyncTask<Double, Void, Integer> {
 
     private AsyncTaskResultListener asyncTaskResultListener;
     private String basicAuthPayload;
+    private OSM_Node nearestNode;
 
     BoundingBoxAsyncTask(Context c, String authPayLoad){
         asyncTaskResultListener = (AsyncTaskResultListener) c;
@@ -47,7 +49,7 @@ public class BoundingBoxAsyncTask extends AsyncTask<Double, Void, Integer> {
             }
 
             int nearestNodeIndex = distances.indexOf(Collections.min(distances));
-            OSM_Node nearestNode = nodeList.get(nearestNodeIndex);
+            nearestNode = nodeList.get(nearestNodeIndex);
 
             if (Integer.valueOf(nearestNode.tags.get("maxspeed")) == 20){
                 return R.drawable.dwadziescia;
@@ -82,5 +84,6 @@ public class BoundingBoxAsyncTask extends AsyncTask<Double, Void, Integer> {
     @Override
     protected void onPostExecute(Integer drawable) {
         asyncTaskResultListener.giveResult(drawable);
+        asyncTaskResultListener.giveNearestNode(nearestNode);
     }
 }

@@ -10,7 +10,7 @@ import java.util.Map;
 import static com.example.nativeapp.Requests.createChangeset;
 import static com.example.nativeapp.Requests.modifyNode;
 
-public class NetworkAsyncTask extends AsyncTask<Void, Void, Integer> {
+public class CreateNodeAsyncTask extends AsyncTask<Void, Void, Integer> {
 
     private AsyncTaskResultListener asyncTaskResultListener;
     private int changeset;
@@ -27,7 +27,7 @@ public class NetworkAsyncTask extends AsyncTask<Void, Void, Integer> {
         return true;
     }
 
-    NetworkAsyncTask(String authPayLoad, double latitude, double longitude, Map<String, String> tags, int currentChangeset, Context c){
+    CreateNodeAsyncTask(String authPayLoad, double latitude, double longitude, Map<String, String> tags, int currentChangeset, Context c){
         lat = latitude;
         lon = longitude;
         t = tags;

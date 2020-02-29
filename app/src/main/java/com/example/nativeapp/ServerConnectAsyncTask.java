@@ -2,6 +2,8 @@ package com.example.nativeapp;
 
 import android.content.Context;
 import android.os.AsyncTask;
+import android.util.Log;
+import android.widget.Toast;
 
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfByte;
@@ -18,14 +20,6 @@ public class ServerConnectAsyncTask extends AsyncTask<Void, Void, Integer> {
     private Socket socket;
     private Mat img;
 
-    {
-        try {
-            socket = new Socket("localhost",2004);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
     ServerConnectAsyncTask(Mat blob, Context c) throws IOException {
         img = blob;
         asyncTaskResultListener = (AsyncTaskResultListener) c;
@@ -38,13 +32,21 @@ public class ServerConnectAsyncTask extends AsyncTask<Void, Void, Integer> {
         byte[] imgBytes = buf.toArray();
 
         try {
+            Log.i("INSIDE ASYNC TASK", "FUCK");
+            socket = new Socket("192.168.0.109",8888);
+            Log.i("INSIDE ASYNC TASK", "1");
             DataOutputStream dout = new DataOutputStream(socket.getOutputStream());
+            Log.i("INSIDE ASYNC TASK", "2");
             DataInputStream din = new DataInputStream(socket.getInputStream());
+            Log.i("INSIDE ASYNC TASK", "3");
 
             dout.write(imgBytes);
+            Log.i("INSIDE ASYNC TASK", "4");
             dout.flush();
+            Log.i("INSIDE ASYNC TASK", "5");
 
             String str = din.readUTF();
+            Log.i("IMGCLASS FROM SERVER __", str);
 
             dout.close();
             din.close();
