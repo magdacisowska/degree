@@ -10,8 +10,8 @@
 
     <org.opencv.android.JavaCameraView
         android:id="@+id/CameraView"
-        android:layout_width="282dp"
-        android:layout_height="430dp"
+        android:layout_width="259dp"
+        android:layout_height="273dp"
         android:visibility="visible"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="1.0"
@@ -21,18 +21,18 @@
 
     <org.osmdroid.views.MapView
         android:id="@+id/mapView"
-        android:layout_width="411dp"
-        android:layout_height="301dp"
+        android:layout_width="402dp"
+        android:layout_height="347dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintVertical_bias="1.0"
-        tools:layout_editor_absoluteX="0dp"/>
+        tools:layout_editor_absoluteX="4dp" />
 
     <ImageView
         android:id="@+id/imageView"
         android:layout_width="65dp"
         android:layout_height="70dp"
-        app:srcCompat="@drawable/zakaz"
+        app:srcCompat="@drawable/koniec"
         tools:layout_editor_absoluteX="0dp"
         tools:layout_editor_absoluteY="0dp" />
 

@@ -54,6 +54,6 @@ public class CreateNodeAsyncTask extends AsyncTask<Void, Void, Integer> {
 
     @Override
     protected void onPostExecute(Integer changeset) {
-        asyncTaskResultListener.giveResult(changeset);
+//        asyncTaskResultListener.giveResult(changeset);
     }
 }

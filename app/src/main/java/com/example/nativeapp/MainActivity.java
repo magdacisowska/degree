@@ -4,6 +4,9 @@ import androidx.core.app.ActivityCompat;
 
 import android.Manifest;
 import android.app.Activity;
+import android.app.job.JobInfo;
+import android.app.job.JobScheduler;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -169,8 +172,8 @@ public class MainActivity extends AppUtilities implements CameraBridgeViewBase.C
         listener = new LocationListener() {
             @Override
             public void onLocationChanged(Location location) {
-                lat.setText("Lat: "  + location.getLatitude());
-                lon.setText("Lon: " + location.getLongitude());
+                lat.setText(""  + location.getLatitude());
+                lon.setText("" + location.getLongitude());
                 GeoPoint currentCenter = new GeoPoint(location.getLatitude(), location.getLongitude());
                 mc.animateTo(currentCenter);
 
@@ -247,10 +250,18 @@ public class MainActivity extends AppUtilities implements CameraBridgeViewBase.C
 
     @Override
     public void giveImgClass(int imgClass) {
-        // todo: do sth with image class obtained from server
-        if (imgDisplayed != imgClass) {
+        // create new node if no sign nearby
+        if (imgDisplayed == R.drawable.koniec) {
             imgDisplayed = decodeAnsToDrawable(imgClass);
-            // edit node
+            Map<String, String> tags = decodeAnsToTags(imgClass);
+            CreateNodeAsyncTask createNodeAsyncTask = new CreateNodeAsyncTask(encodeAuth(),
+                                                Double.parseDouble(lat.getText().toString()),
+                                                Double.parseDouble(lon.getText().toString()),
+                                                tags, 100, thisActivity);
+            createNodeAsyncTask.execute();
+        } // edit node if it differs from class obtained from server
+        else if (imgDisplayed != imgClass) {
+            imgDisplayed = decodeAnsToDrawable(imgClass);
             Map<String, String> tags = decodeAnsToTags(imgClass);
             EditNodeAsyncTask editNodeAsyncTask = new EditNodeAsyncTask(encodeAuth(), nearestNode, tags,100, thisActivity);
             editNodeAsyncTask.execute();
@@ -332,8 +343,8 @@ public class MainActivity extends AppUtilities implements CameraBridgeViewBase.C
                 if (res == 10 & c.r > 15){         // code 10 means blob is stable and can be identified
                     Rect blob = new Rect((int)(c.x - c.r), (int)(c.y - c.r), (int)(c.r*2), (int)(c.r*2));
                     Mat roi = new Mat(colorFrame, blob);
-                    Imgproc.cvtColor(roi, roi, Imgproc.COLOR_RGBA2RGB);
-                    Imgproc.resize(roi, roi, new Size(5,5));
+                    Imgproc.cvtColor(roi, roi, Imgproc.COLOR_RGBA2BGR);
+                    Imgproc.resize(roi, roi, new Size(64,64));
                     ServerConnectAsyncTask asyncTask = null;
                     try {
                         asyncTask = new ServerConnectAsyncTask(roi, thisActivity);

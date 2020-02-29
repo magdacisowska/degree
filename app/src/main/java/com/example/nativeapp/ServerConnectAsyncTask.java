@@ -5,14 +5,18 @@ import android.os.AsyncTask;
 import android.util.Log;
 import android.widget.Toast;
 
+import org.opencv.core.Core;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfByte;
 import org.opencv.imgcodecs.Imgcodecs;
+import org.opencv.imgproc.Imgproc;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
+import java.util.ArrayList;
+import java.util.List;
 
 public class ServerConnectAsyncTask extends AsyncTask<Void, Void, Integer> {
 
@@ -32,27 +36,21 @@ public class ServerConnectAsyncTask extends AsyncTask<Void, Void, Integer> {
         byte[] imgBytes = buf.toArray();
 
         try {
-            Log.i("INSIDE ASYNC TASK", "FUCK");
-            socket = new Socket("192.168.0.109",8888);
-            Log.i("INSIDE ASYNC TASK", "1");
+            socket = new Socket("192.168.43.140",8888);
             DataOutputStream dout = new DataOutputStream(socket.getOutputStream());
-            Log.i("INSIDE ASYNC TASK", "2");
-            DataInputStream din = new DataInputStream(socket.getInputStream());
-            Log.i("INSIDE ASYNC TASK", "3");
 
             dout.write(imgBytes);
-            Log.i("INSIDE ASYNC TASK", "4");
             dout.flush();
-            Log.i("INSIDE ASYNC TASK", "5");
 
-            String str = din.readUTF();
-            Log.i("IMGCLASS FROM SERVER __", str);
+            DataInputStream din = new DataInputStream(socket.getInputStream());
+            int str = din.read();
+            char sign = (char) str;
+            Log.i("IMGCLASS FROM SERVER __", String.valueOf(Character.getNumericValue(sign)));
 
             dout.close();
             din.close();
             socket.close();
-
-            return Integer.valueOf(str);
+            return Character.getNumericValue(sign);
         } catch (IOException e) {
             e.printStackTrace();
             return 99;
