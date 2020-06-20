@@ -22,10 +22,12 @@ public class ServerConnectAsyncTask extends AsyncTask<Void, Void, Integer> {
 
     private AsyncTaskResultListener asyncTaskResultListener;
     private Socket socket;
+    private String ip;
     private Mat img;
 
-    ServerConnectAsyncTask(Mat blob, Context c) throws IOException {
+    ServerConnectAsyncTask(Mat blob, String serverIP, Context c) throws IOException {
         img = blob;
+        ip = serverIP;
         asyncTaskResultListener = (AsyncTaskResultListener) c;
     }
 
@@ -36,7 +38,7 @@ public class ServerConnectAsyncTask extends AsyncTask<Void, Void, Integer> {
         byte[] imgBytes = buf.toArray();
 
         try {
-            socket = new Socket("192.168.43.140",8888);
+            socket = new Socket(ip,8888);
             DataOutputStream dout = new DataOutputStream(socket.getOutputStream());
 
             dout.write(imgBytes);

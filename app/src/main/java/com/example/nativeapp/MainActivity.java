@@ -20,6 +20,7 @@ import android.provider.Settings;
 import android.util.Log;
 import android.view.SurfaceView;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.Switch;
 import android.widget.TextView;
@@ -49,6 +50,7 @@ import org.osmdroid.views.MapView;
 import org.osmdroid.views.overlay.mylocation.GpsMyLocationProvider;
 import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -68,7 +70,6 @@ public class MainActivity extends AppUtilities implements CameraBridgeViewBase.C
     }
 
     // map-related fields
-    private Button secondActivityBtn, cameraViewActivityBtn;
     private TextView lat, lon;
     private ImageView img;
     private LocationManager locationManager;
@@ -88,6 +89,8 @@ public class MainActivity extends AppUtilities implements CameraBridgeViewBase.C
 
     // requests-related fields
     OSM_Node nearestNode;
+    private EditText editTextIP;
+    private String serverIP;
     private int currentChangeset;
 
     // fixed list of circles on the screen
@@ -111,8 +114,10 @@ public class MainActivity extends AppUtilities implements CameraBridgeViewBase.C
         Context ctx = getApplicationContext();
         Configuration.getInstance().load(ctx, PreferenceManager.getDefaultSharedPreferences(ctx));
         Configuration.getInstance().setUserAgentValue(BuildConfig.APPLICATION_ID);
-        Configuration.getInstance().setOsmdroidBasePath(getStorage());
-        Configuration.getInstance().setOsmdroidTileCache(getStorage());
+        File basePath = new File(getCacheDir().getAbsolutePath(), "osmdroid");
+        Configuration.getInstance().setOsmdroidBasePath(basePath);
+        File tileCache = new File(Configuration.getInstance().getOsmdroidBasePath().getAbsolutePath(), "tile");
+        Configuration.getInstance().setOsmdroidTileCache(tileCache);
 
         //inflate and create the map
         setContentView(R.layout.activity_main);
@@ -140,6 +145,7 @@ public class MainActivity extends AppUtilities implements CameraBridgeViewBase.C
         lat = (TextView) findViewById(R.id.latTextView);
         lon = (TextView) findViewById(R.id.lonTextView);
         img = (ImageView) findViewById(R.id.imageView);
+        editTextIP = (EditText) findViewById(R.id.editTextIP);
 
         algorithmSwitch = findViewById(R.id.switch1);
         thresholdSwitch = findViewById(R.id.switch2);
@@ -348,7 +354,8 @@ public class MainActivity extends AppUtilities implements CameraBridgeViewBase.C
                     Imgproc.resize(roi, roi, new Size(64,64));
                     ServerConnectAsyncTask asyncTask = null;
                     try {
-                        asyncTask = new ServerConnectAsyncTask(roi, thisActivity);
+                        serverIP = editTextIP.getText().toString();
+                        asyncTask = new ServerConnectAsyncTask(roi, serverIP, thisActivity);
                         asyncTask.execute();
                     } catch (IOException e) {
                         e.printStackTrace();

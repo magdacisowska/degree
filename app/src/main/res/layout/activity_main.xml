@@ -10,9 +10,9 @@
 
     <org.opencv.android.JavaCameraView
         android:id="@+id/CameraView"
-        android:layout_width="259dp"
-        android:layout_height="273dp"
-        android:visibility="visible"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:visibility="gone"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="1.0"
         app:layout_constraintStart_toStartOf="parent"
@@ -21,12 +21,13 @@
 
     <org.osmdroid.views.MapView
         android:id="@+id/mapView"
-        android:layout_width="402dp"
-        android:layout_height="347dp"
+        android:layout_width="429dp"
+        android:layout_height="391dp"
         app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="1.0"
-        tools:layout_editor_absoluteX="4dp" />
+        app:layout_constraintVertical_bias="1.0" />
 
     <ImageView
         android:id="@+id/imageView"
@@ -40,10 +41,10 @@
         android:id="@+id/infoTextView"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="40dp"
+        android:layout_marginTop="8dp"
         android:text="Current location"
         app:layout_constraintTop_toBottomOf="@+id/switch1"
-        tools:layout_editor_absoluteX="10dp" />
+        tools:layout_editor_absoluteX="4dp" />
 
     <TextView
         android:id="@+id/lonTextView"
@@ -52,7 +53,7 @@
         android:text="Longitude"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.046"
+        app:layout_constraintHorizontal_bias="0.224"
         app:layout_constraintStart_toEndOf="@+id/latTextView"
         app:layout_constraintTop_toBottomOf="@+id/infoTextView"
         app:layout_constraintVertical_bias="0.092" />
@@ -72,6 +73,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Switch algorithm"
+        android:visibility="gone"
         android:textColor="#FFEB3B"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintTop_toTopOf="parent"
@@ -82,11 +84,27 @@
         android:id="@+id/switch2"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:visibility="gone"
         android:text="Treshold"
         android:textColor="#FFEB3B"
         app:layout_constraintBottom_toTopOf="@+id/switch1"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintVertical_bias="0.715"
         tools:layout_editor_absoluteX="16dp" />
+
+    <EditText
+        android:id="@+id/editTextIP"
+        android:layout_width="2dp"
+        android:layout_height="2dp"
+        android:ems="10"
+        android:inputType="textPersonName"
+        android:text="168.192.43.140"
+        android:visibility="gone"
+        app:layout_constraintBottom_toTopOf="@+id/lonTextView"
+        app:layout_constraintEnd_toStartOf="@+id/CameraView"
+        app:layout_constraintHorizontal_bias="0.583"
+        app:layout_constraintStart_toEndOf="@+id/imageView"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.242" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

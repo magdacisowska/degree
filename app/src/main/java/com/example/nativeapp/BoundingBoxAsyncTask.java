@@ -31,7 +31,7 @@ public class BoundingBoxAsyncTask extends AsyncTask<Double, Void, Integer> {
 
     @Override
     protected Integer doInBackground(Double... doubles) {
-        final double RADIUS = 0.0005;
+        final double RADIUS = 0.001;
         double lat = doubles[0];
         double lon = doubles[1];
 
