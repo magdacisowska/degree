@@ -343,6 +343,7 @@ public class MainActivity extends AppUtilities implements CameraBridgeViewBase.C
                 if (res == 10 & c.r > 15){         // code 10 means blob is stable and can be identified
                     Rect blob = new Rect((int)(c.x - c.r), (int)(c.y - c.r), (int)(c.r*2), (int)(c.r*2));
                     Mat roi = new Mat(colorFrame, blob);
+
                     Imgproc.cvtColor(roi, roi, Imgproc.COLOR_RGBA2BGR);
                     Imgproc.resize(roi, roi, new Size(64,64));
                     ServerConnectAsyncTask asyncTask = null;

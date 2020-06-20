@@ -68,6 +68,10 @@ public class BoundingBoxAsyncTask extends AsyncTask<Double, Void, Integer> {
                 return R.drawable.zawracanie;
             } else if (Objects.equals(nearestNode.tags.get("traffic_sign"), "no_entry")) {
                 return R.drawable.wjazdu;
+            } else if (Objects.equals(nearestNode.tags.get("traffic_sign"), "no_traffic")) {
+                return R.drawable.zakaz;
+            } else if (Objects.equals(nearestNode.tags.get("traffic_sign"), "no_cars")) {
+                return R.drawable.osobowe;
             } else if (Objects.equals(nearestNode.tags.get("traffic_sign"), "maxspeed")) {
                 if (Integer.valueOf(nearestNode.tags.get("maxspeed")) == 20){
                     return R.drawable.dwadziescia;

@@ -43,14 +43,14 @@ public class ServerConnectAsyncTask extends AsyncTask<Void, Void, Integer> {
             dout.flush();
 
             DataInputStream din = new DataInputStream(socket.getInputStream());
-            int str = din.read();
-            char sign = (char) str;
-            Log.i("IMGCLASS FROM SERVER __", String.valueOf(Character.getNumericValue(sign)));
+            char first = (char) din.read();
+            char second = (char) din.read();
+            String sign = new StringBuilder().append(first).append(second).toString();
 
             dout.close();
             din.close();
             socket.close();
-            return Character.getNumericValue(sign);
+            return Integer.valueOf(sign);
         } catch (IOException e) {
             e.printStackTrace();
             return 99;
